@@ -7,6 +7,7 @@ const fp = require('lodash/fp');
 const {nodes, getAllNodesInfo} = require('./NodeStore');
 const {behaveRandomly} = require('./Values');
 const CommandProcessors = require('./CommandProcessors');
+const {observable, autorun} = require('mobx');
 
 module.exports = function Node(port) {
 
@@ -15,7 +16,7 @@ module.exports = function Node(port) {
         ip: '127.0.0.1',
         port: port,
         available: 100,
-        used: _.random(40, 70),
+        used: observable(_.random(40, 70)),
         isLeader: false,
         alive: true,
         die: () => {
@@ -25,16 +26,18 @@ module.exports = function Node(port) {
         nodeAdded: (node) => {
             sendToClients('updateNodes', [node]);
         },
-        shutdown: () => {
+        shutdown: () => new Promise( (resolve, reject) => {
             nodes.delete(port);
             sendToClients('removeNodes', [me.address]);
             me.alive = false;
             setTimeout(() => {
                 me.getWsServer().shutDown();
                 me.getHttpServer().close();
+                nodes.has(port) ? reject() : resolve();
             }, 200);
-        },
-        sendToClients: ({cmd, data}) => sendToClients(cmd, data)
+        }),
+        sendToClients: ({cmd, data}) => sendToClients(cmd, data),
+        setUsage: (val) => updateUsage(val)
     });
 
     const me = nodes.get(port);
@@ -111,31 +114,56 @@ module.exports = function Node(port) {
         }
     }());
 
-        (function updateStorageUsed(direction = 1) {
-            if(behaveRandomly.get()) {
-                me.used += direction;
-                sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used', 'available')]);
+    (function updateStorageUsed(direction = 1) {
+        if(behaveRandomly.get()) {
+            me.used += direction;
+            sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used', 'available')]);
 
-                me.used < 40 && (direction = _.random(1, 2));
-                me.used > 70 && (direction = _.random(-1, -2));
+            me.used < 40 && (direction = _.random(1, 2));
+            me.used > 70 && (direction = _.random(-1, -2));
+        }
+        setTimeout(() => me.isShutdown || updateStorageUsed(direction), 1000);
+    }());
+
+    (function sendMessage() {
+        setTimeout(() => {
+            if(behaveRandomly.get() && nodes.size > 1) {
+                me.isShutdown || sendToClients('messages', [
+                    {
+                        srcAddr: getOtherRandomNode().address,
+                        timestamp: new Date().getTime(),
+                        body: {something: `sent - ${_.uniqueId()}`}
+                    }
+                ]);
             }
-            setTimeout(() => me.isShutdown || updateStorageUsed(direction), 1000);
-        }());
+            me.isShutdown || sendMessage();
+        }, _.random(5000, 10000));
+    }());
 
-        (function sendMessage() {
-            setTimeout(() => {
-                if(behaveRandomly.get() && nodes.size > 1) {
-                    me.isShutdown || sendToClients('messages', [
-                        {
-                            srcAddr: getOtherRandomNode().address,
-                            timestamp: new Date().getTime(),
-                            body: {something: `sent - ${_.uniqueId()}`}
-                        }
-                    ]);
+    autorun(function logUsageWarning() {
+        if (me.used >= 85) {
+            sendToClients('log', [
+                {
+                    level: 'warn',
+                    timestamp: new Date().toISOString(),
+                    message: `Usage is at ${me.used}`,
+                    node: me
                 }
-                me.isShutdown || sendMessage();
-            }, _.random(5000, 10000));
-        }());
+            ]);
+
+        };
+    });
+
+    function updateUsage(val) {
+        me.used = val;
+        sendToClients('updateNodes', [
+            _.pick(me, 'ip', 'port', 'address', 'used', 'available')
+        ]);
+    };
+
+    function getPeerInfo(node) {
+        return nodes.values().filter(peer => peer.address !== node.address).map(n => _.pick(n, 'address', 'ip', 'port'));
+    }
 
     const getOtherRandomNode = () => {
         const n = getRandomNode();
