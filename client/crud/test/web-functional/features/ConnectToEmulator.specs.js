@@ -3,8 +3,6 @@ import {findComponentsTest} from "react-functional-test";
 
 describe('Emulator connections', () => {
 
-    it('emulator should not have ')
-
     it('should be able to connect to the emulator', () => {
 
         start();
