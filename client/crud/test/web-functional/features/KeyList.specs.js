@@ -50,7 +50,7 @@ describe('KeyList functionality', () => {
 
         browser.element('.glyphicon-plus').click();
 
-        browser.keys(['t', 'e', 's', 't', 'Enter']);
+        browser.keys(['test', 'Enter']);
 
         browser.element('button*=JSON Data').click();
 
