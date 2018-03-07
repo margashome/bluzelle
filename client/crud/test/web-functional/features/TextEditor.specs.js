@@ -1,7 +1,7 @@
 import {start, setData} from "../emulator/Emulator";
 import {reset, checkUndo} from "../util";
 
-describe.only('Text Editor functionality.', () => {
+describe('Text Editor functionality.', () => {
 
     before(() => start());
 

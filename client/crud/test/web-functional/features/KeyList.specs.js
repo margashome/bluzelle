@@ -1,5 +1,5 @@
 import {start, setData} from "../emulator/Emulator";
-import {reset} from "../util";
+import {reset, checkUndo} from "../util";
 import {findComponentsTest} from "react-functional-test";
 
 describe('KeyList functionality', () => {
@@ -49,23 +49,66 @@ describe('KeyList functionality', () => {
 
     });
 
-    it('should be able to add a key with object type', () => {
+    it('should be able to select a key', () => {
 
-        browser.element('.glyphicon-plus').click();
+        browser.waitForExist('button*=textA');
 
-        browser.keys(['test', 'Enter']);
+        // First click downloads the data and clears history
+        browser.element('button*=textA').click();
 
-        browser.element('button*=JSON Data').click();
+        // Unselect and reselect
+        browser.element('button*=textA').click();
+        browser.element('button*=textA').click();
+
+
+        // Verify that selection can be undone
+        checkUndo({
+            verifyDo: () =>
+                browser.waitForExist('textarea'),
+            verifyUndo: () =>
+                browser.waitForExist('textarea', 500, true)
+        });
 
     });
 
-    it('should be able to add a key with text type', () => {
 
-        browser.element('.glyphicon-plus').click();
+    describe('adding keys', () => {
 
-        browser.keys(['test', 'Enter']);
+        it('should be able to add a key with object type', () => {
 
-        browser.element('button*=Text').click();
+            browser.element('.glyphicon-plus').click();
+
+            browser.keys(['test', 'Enter']);
+
+            browser.waitForExist('button*=JSON Data');
+            browser.element('button*=JSON Data').click();
+
+            checkUndo({
+                verifyDo: () =>
+                    browser.waitForExist('button*=test'),
+                verifyUndo: () =>
+                    browser.waitForExist('button*=test', 500, true)
+            });
+
+        });
+
+        it('should be able to add a key with text type', () => {
+
+            browser.element('.glyphicon-plus').click();
+
+            browser.keys(['test', 'Enter']);
+
+            browser.waitForExist('button*=Text');
+            browser.element('button*=Text').click();
+
+            checkUndo({
+                verifyDo: () =>
+                    browser.waitForExist('button*=test'),
+                verifyUndo: () =>
+                    browser.waitForExist('button*=test', 500, true)
+            });
+
+        });
 
     });
 
@@ -112,7 +155,12 @@ describe('KeyList functionality', () => {
 
         browser.keys(['newkey', 'Enter']);
 
-        browser.waitForExist('span=newkey');
+        checkUndo({
+            verifyDo: () =>
+                browser.waitForExist('span=newkey'),
+            verifyUndo: () =>
+                browser.waitForExist('span=textA')
+        });
 
     });
 
@@ -123,7 +171,12 @@ describe('KeyList functionality', () => {
 
         browser.element('.glyphicon-remove').click();
 
-        expect(browser.isExisting('button*=textA')).to.be.false;
+        checkUndo({
+            verifyDo: () =>
+                expect(browser.isExisting('button*=textA')).to.be.false,
+            verifyUndo: () =>
+                expect(browser.isExisting('button*=textA')).to.be.true
+        });
 
     });
 
