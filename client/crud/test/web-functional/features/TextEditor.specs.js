@@ -1,7 +1,7 @@
 import {start, setData} from "../emulator/Emulator";
-import {reset} from "../util";
+import {reset, checkUndo} from "../util";
 
-describe('Text Editor functionality.', () => {
+describe.only('Text Editor functionality.', () => {
 
     before(() => start());
 
@@ -24,25 +24,6 @@ describe('Text Editor functionality.', () => {
     });
 
     it('should be able to type into the text area and have it persist', () => {
-        //
-        // execute() {
-        //     verifyDo();
-        //     undo(); // <== defined here
-        //     verifyUndo();
-        //     do(); // <== defined here
-        //     verifyDo();
-        // }
-        //
-        //
-        // checkUndo({
-        //     verifyDo: () => {
-        //
-        //     },
-        //     verifyUndo: () => {
-        //
-        //     }
-        // });
-
 
         browser.element('button*=text').click();
 
@@ -58,12 +39,16 @@ describe('Text Editor functionality.', () => {
         browser.element('button*=text').click();
         browser.element('button*=text').click();
 
-        browser.waitForExist('textarea*=My additional text here');
+
+        checkUndo({
+            verifyDo: () => {
+                browser.waitForExist('textarea*=My additional text here');
+            },
+            verifyUndo: () => {
+                browser.waitForExist('textarea*=My additional text here', 500, true);
+            }
+        });
 
     });
-
-    // TODO: undo/redo testing
-    // TODO: saving testing
-    // TODO: consistency across browsers
 
 });
