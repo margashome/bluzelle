@@ -1,7 +1,7 @@
 import {start, setData} from "../emulator/Emulator";
-import {reset} from "../util";
+import {reset, checkUndo} from "../util";
 
-describe('JSON Editor functionality.', () => {
+describe.only('JSON Editor functionality.', () => {
 
     before(() => start());
 
@@ -42,9 +42,15 @@ describe('JSON Editor functionality.', () => {
         browser.setValue('input', '{ "mykey": 123 }');
         browser.submitForm('input');
 
-        browser.waitForExist('span*=mykey');
+        checkUndo({
+            verifyDo: () =>
+                browser.waitForExist('span*=mykey'),
+            verifyUndo: () =>
+                browser.waitForExist('span*=crazy text')
+        });
 
     });
+
 
     it('should have a working plus button for objects', () => {
 
@@ -56,8 +62,16 @@ describe('JSON Editor functionality.', () => {
 
         browser.keys(['myKey', 'Enter', '132', 'Enter']);
 
-        browser.waitForExist('span*=myKey');
-        browser.waitForExist('span*=132');
+        checkUndo({
+            verifyDo: () => {
+                browser.waitForExist('span*=myKey');
+                browser.waitForExist('span*=132');
+            },
+            verifyUndo: () => {
+                browser.waitForExist('span*=myKey', 500, true);
+                browser.waitForExist('span*=132', 500, true);
+            }
+        });
 
     });
 
@@ -73,8 +87,12 @@ describe('JSON Editor functionality.', () => {
 
         browser.elements('.glyphicon-remove').value[1].click();
 
-        // Reverse flag is true, we are waiting for it to not exist
-        browser.waitForExist('span*=123', 500, true);
+        checkUndo({
+            verifyDo: () =>
+                browser.waitForExist('span*=123', 500, true),
+            verifyUndo: () =>
+                browser.waitForExist('span*=123')
+        });
 
     });
 
@@ -91,7 +109,12 @@ describe('JSON Editor functionality.', () => {
 
         browser.keys(['999', 'Enter']);
 
-        browser.waitForExist('span*=999');
+        checkUndo({
+            verifyDo: () =>
+                browser.waitForExist('span*=999'),
+            verifyUndo: () =>
+                browser.waitForExist('span*=999', 500, true)
+        });
 
     });
 
@@ -107,8 +130,12 @@ describe('JSON Editor functionality.', () => {
 
         browser.elements('.glyphicon-remove').value[1].click();
 
-        // Reverse flag is true, we are waiting for it to not exist
-        browser.waitForExist('span*=654', 500, true);
+        checkUndo({
+            verifyDo: () =>
+                browser.waitForExist('span*=654', 500, true),
+            verifyUndo: () =>
+                browser.waitForExist('span*=654')
+        });
 
     });
 
