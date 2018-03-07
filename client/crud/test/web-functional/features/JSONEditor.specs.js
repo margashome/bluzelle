@@ -1,10 +1,13 @@
 import {start, setData} from "../emulator/Emulator";
+import {reset} from "../util";
 
 describe('JSON Editor functionality.', () => {
 
+    before(() => start());
+
     beforeEach(() => {
 
-        start();
+        reset();
         setData({});
 
         browser.url('http://localhost:8200/?test');
